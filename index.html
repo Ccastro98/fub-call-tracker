@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Call Tracker</title>
+
+<!-- REQUIRED: Follow Up Boss Embedded Apps SDK -->
+<script type="text/javascript" src="https://eia.followupboss.com/embeddedApps-v1.0.1.js"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -32,12 +36,30 @@
     padding: 16px;
   }
 
-  .widget {
-    max-width: 480px;
-    margin: 0 auto;
+  .widget { max-width: 480px; margin: 0 auto; }
+
+  #loadingState {
+    text-align: center;
+    padding: 40px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
   }
 
-  /* Header */
+  .spinner {
+    width: 24px; height: 24px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #mainContent { display: none; }
+
   .header {
     display: flex;
     align-items: center;
@@ -63,9 +85,12 @@
     border: 1px solid rgba(79,142,247,0.25);
     padding: 3px 10px;
     border-radius: 4px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  /* Stats Bar */
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -81,7 +106,6 @@
     text-align: center;
     position: relative;
     overflow: hidden;
-    transition: border-color 0.2s;
   }
 
   .stat::before {
@@ -117,7 +141,6 @@
     color: var(--muted);
   }
 
-  /* Total */
   .total-bar {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -151,10 +174,7 @@
     font-family: var(--mono);
   }
 
-  /* Log Button Group */
-  .log-section {
-    margin-bottom: 14px;
-  }
+  .log-section { margin-bottom: 14px; }
 
   .log-label {
     font-size: 10px;
@@ -191,27 +211,18 @@
 
   .outcome-btn:hover { transform: translateY(-1px); }
   .outcome-btn:active { transform: translateY(0); }
-
   .outcome-btn.no-answer:hover { background: rgba(245,166,35,0.15); border-color: var(--yellow); color: var(--yellow); }
   .outcome-btn.voicemail:hover { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
   .outcome-btn.connected:hover { background: rgba(62,207,142,0.15); border-color: var(--green); color: var(--green); }
   .outcome-btn.wrong:hover { background: rgba(242,95,92,0.15); border-color: var(--red); color: var(--red); }
 
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .no-answer .dot { background: var(--yellow); }
   .voicemail .dot { background: var(--purple); }
   .connected .dot { background: var(--green); }
   .wrong .dot { background: var(--red); }
 
-  /* Note input */
-  .note-section {
-    margin-bottom: 14px;
-  }
+  .note-section { margin-bottom: 14px; }
 
   .note-input {
     width: 100%;
@@ -230,7 +241,6 @@
   .note-input:focus { border-color: var(--accent); }
   .note-input::placeholder { color: var(--muted); }
 
-  /* History */
   .history-header {
     display: flex;
     align-items: center;
@@ -262,7 +272,6 @@
 
   .reset-btn:hover { border-color: var(--red); color: var(--red); }
 
-  /* Confirm modal */
   .confirm-overlay {
     position: fixed;
     inset: 0;
@@ -277,10 +286,7 @@
     transition: opacity 0.2s;
   }
 
-  .confirm-overlay.active {
-    opacity: 1;
-    pointer-events: all;
-  }
+  .confirm-overlay.active { opacity: 1; pointer-events: all; }
 
   .confirm-box {
     background: var(--surface2);
@@ -328,10 +334,7 @@
   .confirm-input:focus { border-color: var(--red); }
   .confirm-input::placeholder { color: var(--muted); }
 
-  .confirm-btns {
-    display: flex;
-    gap: 8px;
-  }
+  .confirm-btns { display: flex; gap: 8px; }
 
   .btn-cancel {
     flex: 1;
@@ -364,14 +367,9 @@
     pointer-events: none;
   }
 
-  .btn-confirm-reset.enabled {
-    opacity: 1;
-    pointer-events: all;
-  }
-
+  .btn-confirm-reset.enabled { opacity: 1; pointer-events: all; }
   .btn-confirm-reset.enabled:hover { background: rgba(242,95,92,0.3); }
 
-  /* Log entries */
   .log-list {
     display: flex;
     flex-direction: column;
@@ -401,13 +399,7 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  .entry-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    margin-top: 4px;
-    flex-shrink: 0;
-  }
-
+  .entry-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
   .entry-body { flex: 1; min-width: 0; }
 
   .entry-outcome {
@@ -419,20 +411,8 @@
     margin-bottom: 2px;
   }
 
-  .entry-note {
-    font-size: 11px;
-    color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .entry-time {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    flex-shrink: 0;
-  }
+  .entry-note { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-time { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
   .empty-state {
     text-align: center;
@@ -445,14 +425,8 @@
     border-radius: 8px;
   }
 
-  /* Divider */
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 14px 0;
-  }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
 
-  /* Toast */
   .toast {
     position: fixed;
     bottom: 16px;
@@ -476,69 +450,76 @@
 <body>
 
 <div class="widget">
-  <div class="header">
-    <div class="title">📞 Call Tracker</div>
-    <div class="contact-name" id="contactDisplay">Loading...</div>
+  <div id="loadingState">
+    <div class="spinner"></div>
+    Connecting to Follow Up Boss...
   </div>
 
-  <div class="stats">
-    <div class="stat no-answer">
-      <div class="stat-num" id="count-no-answer">0</div>
-      <div class="stat-label">No Ans.</div>
+  <div id="mainContent">
+    <div class="header">
+      <div class="title">📞 Call Tracker</div>
+      <div class="contact-name" id="contactDisplay">—</div>
     </div>
-    <div class="stat voicemail">
-      <div class="stat-num" id="count-voicemail">0</div>
-      <div class="stat-label">V-Mail</div>
+
+    <div class="stats">
+      <div class="stat no-answer">
+        <div class="stat-num" id="count-no-answer">0</div>
+        <div class="stat-label">No Ans.</div>
+      </div>
+      <div class="stat voicemail">
+        <div class="stat-num" id="count-voicemail">0</div>
+        <div class="stat-label">V-Mail</div>
+      </div>
+      <div class="stat connected">
+        <div class="stat-num" id="count-connected">0</div>
+        <div class="stat-label">Conn.</div>
+      </div>
+      <div class="stat wrong">
+        <div class="stat-num" id="count-wrong">0</div>
+        <div class="stat-label">Wrong#</div>
+      </div>
     </div>
-    <div class="stat connected">
-      <div class="stat-num" id="count-connected">0</div>
-      <div class="stat-label">Conn.</div>
+
+    <div class="total-bar">
+      <div>
+        <div class="total-label">Total Attempts</div>
+        <div class="last-attempt" id="lastAttempt">No attempts yet</div>
+      </div>
+      <div class="total-count" id="totalCount">0</div>
     </div>
-    <div class="stat wrong">
-      <div class="stat-num" id="count-wrong">0</div>
-      <div class="stat-label">Wrong#</div>
+
+    <div class="log-section">
+      <div class="log-label">Log Attempt</div>
+      <div class="outcome-grid">
+        <button class="outcome-btn no-answer" onclick="logAttempt('No Answer')">
+          <span class="dot"></span> No Answer
+        </button>
+        <button class="outcome-btn voicemail" onclick="logAttempt('Left Voicemail')">
+          <span class="dot"></span> Left Voicemail
+        </button>
+        <button class="outcome-btn connected" onclick="logAttempt('Connected')">
+          <span class="dot"></span> Connected
+        </button>
+        <button class="outcome-btn wrong" onclick="logAttempt('Wrong Number')">
+          <span class="dot"></span> Wrong Number
+        </button>
+      </div>
     </div>
-  </div>
 
-  <div class="total-bar">
-    <div>
-      <div class="total-label">Total Attempts</div>
-      <div class="last-attempt" id="lastAttempt">No attempts yet</div>
+    <div class="note-section">
+      <textarea class="note-input" id="noteInput" rows="2" placeholder="Optional note for this attempt..."></textarea>
     </div>
-    <div class="total-count" id="totalCount">0</div>
-  </div>
 
-  <div class="log-section">
-    <div class="log-label">Log Attempt</div>
-    <div class="outcome-grid">
-      <button class="outcome-btn no-answer" onclick="logAttempt('No Answer')">
-        <span class="dot"></span> No Answer
-      </button>
-      <button class="outcome-btn voicemail" onclick="logAttempt('Left Voicemail')">
-        <span class="dot"></span> Left Voicemail
-      </button>
-      <button class="outcome-btn connected" onclick="logAttempt('Connected')">
-        <span class="dot"></span> Connected
-      </button>
-      <button class="outcome-btn wrong" onclick="logAttempt('Wrong Number')">
-        <span class="dot"></span> Wrong Number
-      </button>
+    <div class="divider"></div>
+
+    <div class="history-header">
+      <div class="history-label">History</div>
+      <button class="reset-btn" onclick="showResetConfirm()">Reset</button>
     </div>
-  </div>
 
-  <div class="note-section">
-    <textarea class="note-input" id="noteInput" rows="2" placeholder="Optional note for this attempt..."></textarea>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="history-header">
-    <div class="history-label">History</div>
-    <button class="reset-btn" onclick="showResetConfirm()">Reset</button>
-  </div>
-
-  <div class="log-list" id="logList">
-    <div class="empty-state">No calls logged yet</div>
+    <div class="log-list" id="logList">
+      <div class="empty-state">No calls logged yet</div>
+    </div>
   </div>
 </div>
 
@@ -555,60 +536,69 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-  const OUTCOME_COLORS = {
+  var OUTCOME_COLORS = {
     'No Answer': 'var(--yellow)',
     'Left Voicemail': 'var(--purple)',
     'Connected': 'var(--green)',
     'Wrong Number': 'var(--red)'
   };
 
-  const OUTCOME_KEYS = {
-    'No Answer': 'no-answer',
-    'Left Voicemail': 'voicemail',
-    'Connected': 'connected',
-    'Wrong Number': 'wrong'
+  var currentPersonId = null;
+  var currentPersonName = null;
+
+  // ── FUB Embedded Apps SDK ──────────────────────────────────────────────────
+  window.onEmbeddedAppSdkReady = function(sdk) {
+    sdk.getPerson(function(person) {
+      currentPersonId = person.id ? String(person.id) : 'unknown';
+      currentPersonName = person.name || ('Contact #' + currentPersonId);
+      showWidget();
+    });
+
+    // Update if agent navigates to a different contact
+    sdk.on('personUpdated', function(person) {
+      currentPersonId = person.id ? String(person.id) : 'unknown';
+      currentPersonName = person.name || ('Contact #' + currentPersonId);
+      render();
+    });
   };
 
-  // Get contact ID from URL params (FUB passes ?personId=xxx)
-  function getPersonId() {
-    const p = new URLSearchParams(window.location.search);
-    return p.get('personId') || p.get('contactId') || 'demo';
+  // Fallback for testing outside of FUB (e.g. direct browser visit)
+  setTimeout(function() {
+    if (!currentPersonId) {
+      currentPersonId = 'demo';
+      currentPersonName = 'Demo Contact';
+      showWidget();
+    }
+  }, 3000);
+
+  function showWidget() {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    render();
   }
 
-  function getContactName() {
-    const p = new URLSearchParams(window.location.search);
-    return p.get('contactName') || p.get('name') || null;
-  }
-
-  function storageKey() {
-    return `fub_calls_${getPersonId()}`;
-  }
+  // ── Storage ────────────────────────────────────────────────────────────────
+  function storageKey() { return 'fub_calls_' + currentPersonId; }
 
   function loadData() {
-    try {
-      return JSON.parse(localStorage.getItem(storageKey())) || { attempts: [] };
-    } catch { return { attempts: [] }; }
+    try { return JSON.parse(localStorage.getItem(storageKey())) || { attempts: [] }; }
+    catch(e) { return { attempts: [] }; }
   }
 
-  function saveData(data) {
-    localStorage.setItem(storageKey(), JSON.stringify(data));
-  }
+  function saveData(data) { localStorage.setItem(storageKey(), JSON.stringify(data)); }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    const data = loadData();
-    const attempts = data.attempts;
+    var data = loadData();
+    var attempts = data.attempts;
 
-    // Contact display
-    const name = getContactName();
-    document.getElementById('contactDisplay').textContent = name ? name : `ID: ${getPersonId()}`;
+    document.getElementById('contactDisplay').textContent = currentPersonName || '—';
 
-    // Counts
-    const counts = { 'No Answer': 0, 'Left Voicemail': 0, 'Connected': 0, 'Wrong Number': 0 };
-    attempts.forEach(a => { if (counts[a.outcome] !== undefined) counts[a.outcome]++; });
+    var counts = { 'No Answer': 0, 'Left Voicemail': 0, 'Connected': 0, 'Wrong Number': 0 };
+    attempts.forEach(function(a) { if (counts[a.outcome] !== undefined) counts[a.outcome]++; });
 
     document.getElementById('count-no-answer').textContent = counts['No Answer'];
     document.getElementById('count-voicemail').textContent = counts['Left Voicemail'];
@@ -616,53 +606,54 @@
     document.getElementById('count-wrong').textContent = counts['Wrong Number'];
     document.getElementById('totalCount').textContent = attempts.length;
 
-    // Last attempt
     if (attempts.length > 0) {
-      const last = attempts[attempts.length - 1];
-      const d = new Date(last.time);
-      document.getElementById('lastAttempt').textContent = `Last: ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+      var last = attempts[attempts.length - 1];
+      var d = new Date(last.time);
+      document.getElementById('lastAttempt').textContent =
+        'Last: ' + d.toLocaleDateString() + ' ' +
+        d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     } else {
       document.getElementById('lastAttempt').textContent = 'No attempts yet';
     }
 
-    // Log list
-    const list = document.getElementById('logList');
+    var list = document.getElementById('logList');
     if (attempts.length === 0) {
       list.innerHTML = '<div class="empty-state">No calls logged yet</div>';
       return;
     }
 
-    list.innerHTML = [...attempts].reverse().map(a => {
-      const color = OUTCOME_COLORS[a.outcome] || 'var(--muted)';
-      const d = new Date(a.time);
-      const timeStr = `${d.toLocaleDateString([], {month:'short',day:'numeric'})} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
-      return `
-        <div class="log-entry">
-          <div class="entry-dot" style="background:${color}"></div>
-          <div class="entry-body">
-            <div class="entry-outcome" style="color:${color}">${a.outcome}</div>
-            ${a.note ? `<div class="entry-note">${escHtml(a.note)}</div>` : ''}
-          </div>
-          <div class="entry-time">${timeStr}</div>
-        </div>`;
+    list.innerHTML = attempts.slice().reverse().map(function(a) {
+      var color = OUTCOME_COLORS[a.outcome] || 'var(--muted)';
+      var d = new Date(a.time);
+      var timeStr = d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' +
+                    d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      return '<div class="log-entry">' +
+        '<div class="entry-dot" style="background:' + color + '"></div>' +
+        '<div class="entry-body">' +
+          '<div class="entry-outcome" style="color:' + color + '">' + escHtml(a.outcome) + '</div>' +
+          (a.note ? '<div class="entry-note">' + escHtml(a.note) + '</div>' : '') +
+        '</div>' +
+        '<div class="entry-time">' + timeStr + '</div>' +
+      '</div>';
     }).join('');
   }
 
+  // ── Actions ────────────────────────────────────────────────────────────────
   function logAttempt(outcome) {
-    const note = document.getElementById('noteInput').value.trim();
-    const data = loadData();
-    data.attempts.push({ outcome, note, time: new Date().toISOString() });
+    var note = document.getElementById('noteInput').value.trim();
+    var data = loadData();
+    data.attempts.push({ outcome: outcome, note: note, time: new Date().toISOString() });
     saveData(data);
     document.getElementById('noteInput').value = '';
     render();
-    showToast(`✓ Logged: ${outcome}`);
+    showToast('✓ Logged: ' + outcome);
   }
 
   function showResetConfirm() {
     document.getElementById('confirmInput').value = '';
     document.getElementById('confirmResetBtn').classList.remove('enabled');
     document.getElementById('confirmOverlay').classList.add('active');
-    setTimeout(() => document.getElementById('confirmInput').focus(), 100);
+    setTimeout(function() { document.getElementById('confirmInput').focus(); }, 100);
   }
 
   function hideResetConfirm() {
@@ -670,12 +661,9 @@
   }
 
   function checkConfirmInput(val) {
-    const btn = document.getElementById('confirmResetBtn');
-    if (val.trim().toUpperCase() === 'RESET') {
-      btn.classList.add('enabled');
-    } else {
-      btn.classList.remove('enabled');
-    }
+    var btn = document.getElementById('confirmResetBtn');
+    if (val.trim().toUpperCase() === 'RESET') btn.classList.add('enabled');
+    else btn.classList.remove('enabled');
   }
 
   function doReset() {
@@ -686,22 +674,19 @@
   }
 
   function showToast(msg) {
-    const t = document.getElementById('toast');
+    var t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2200);
+    setTimeout(function() { t.classList.remove('show'); }, 2200);
   }
 
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // Close modal on overlay click
   document.getElementById('confirmOverlay').addEventListener('click', function(e) {
     if (e.target === this) hideResetConfirm();
   });
-
-  render();
 </script>
 </body>
 </html>
