@@ -6,7 +6,6 @@
 <title>Call Tracker</title>
 <script type="text/javascript" src="https://eia.followupboss.com/embeddedApps-v1.0.1.js"></script>
 <style>
-  /* System font stack — zero network requests, renders instantly */
   :root {
     --bg: #ffffff;
     --surface: #f7f8fa;
@@ -24,25 +23,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--sans); background: var(--bg); color: var(--text); padding: 14px; }
   .widget { max-width: 480px; margin: 0 auto; }
-
-  /* Loading — shown immediately, replaced fast */
-  #loadingState {
-    text-align: center; padding: 30px 20px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em;
-  }
-  .spinner {
-    width: 20px; height: 20px; border: 2px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.7s linear infinite; margin: 0 auto 10px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  #errorState {
-    display: none; text-align: center; padding: 28px 20px;
-    font-family: var(--mono); font-size: 11px; color: var(--muted);
-    border: 1px dashed var(--border); border-radius: 10px;
-  }
-  #mainContent { display: none; }
 
   /* Header */
   .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -67,10 +47,7 @@
 
   /* Summary cards */
   .summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  .summary-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 14px; position: relative; overflow: hidden;
-  }
+  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; position: relative; overflow: hidden; }
   .summary-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .summary-card.attempts-card::before { background: var(--accent); }
   .summary-card.convos-card::before   { background: var(--green); }
@@ -105,7 +82,7 @@
     border-radius: 7px; cursor: pointer; display: flex; align-items: center; gap: 7px;
     transition: background 0.1s, border-color 0.1s, color 0.1s; letter-spacing: 0.03em;
   }
-  .outcome-btn:active { opacity: 0.8; }
+  .outcome-btn:active { opacity: 0.75; }
   .outcome-btn.no-answer:hover { background: #fffbeb; border-color: var(--yellow); color: var(--yellow); }
   .outcome-btn.voicemail:hover { background: #f5f3ff; border-color: var(--purple); color: var(--purple); }
   .outcome-btn.connected:hover { background: #f0fdf4; border-color: var(--green);  color: var(--green); }
@@ -140,10 +117,7 @@
   .log-list { display: flex; flex-direction: column; gap: 5px; max-height: 190px; overflow-y: auto; padding-right: 2px; }
   .log-list::-webkit-scrollbar { width: 3px; }
   .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .log-entry {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
-    padding: 8px 11px; display: flex; align-items: flex-start; gap: 9px;
-  }
+  .log-entry { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 11px; display: flex; align-items: flex-start; gap: 9px; }
   .log-entry.is-convo { border-left: 3px solid var(--green); }
   .entry-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
   .entry-body { flex: 1; min-width: 0; }
@@ -156,10 +130,17 @@
     border: 1px solid #bbf7d0; border-radius: 3px; padding: 1px 4px; margin-left: 5px; vertical-align: middle;
   }
   .entry-time { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
-  .empty-state {
-    text-align: center; padding: 18px; font-family: var(--mono); font-size: 11px;
-    color: var(--muted); border: 1px dashed var(--border); border-radius: 7px;
+  .empty-state { text-align: center; padding: 18px; font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px dashed var(--border); border-radius: 7px; }
+
+  /* SDK status indicator — subtle, top right */
+  .sdk-status {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #d1d5db; margin-left: 6px; vertical-align: middle;
+    transition: background 0.3s;
   }
+  .sdk-status.connected { background: var(--green); }
+  .sdk-status.waiting   { background: var(--yellow); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
   /* Confirm modal */
   .confirm-overlay {
@@ -184,15 +165,8 @@
   .confirm-input:focus { border-color: var(--red); }
   .confirm-input::placeholder { color: var(--muted); }
   .confirm-btns { display: flex; gap: 7px; }
-  .btn-cancel {
-    flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-    font-family: var(--mono); font-size: 11px; padding: 8px; border-radius: 5px; cursor: pointer;
-  }
-  .btn-confirm-reset {
-    flex: 1; background: #fef2f2; border: 1px solid var(--red); color: var(--red);
-    font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 8px; border-radius: 5px;
-    cursor: pointer; opacity: 0.4; pointer-events: none;
-  }
+  .btn-cancel { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); font-size: 11px; padding: 8px; border-radius: 5px; cursor: pointer; }
+  .btn-confirm-reset { flex: 1; background: #fef2f2; border: 1px solid var(--red); color: var(--red); font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 8px; border-radius: 5px; cursor: pointer; opacity: 0.4; pointer-events: none; }
   .btn-confirm-reset.enabled { opacity: 1; pointer-events: all; }
 
   /* Toast */
@@ -207,77 +181,67 @@
 <body>
 <div class="widget">
 
-  <div id="loadingState">
-    <div class="spinner"></div>
-    Connecting...
+  <!-- Widget is ALWAYS visible immediately — no loading gate -->
+  <div class="header">
+    <div class="title">📞 Call Tracker <span class="sdk-status waiting" id="sdkDot" title="Connecting to FUB..."></span></div>
+    <div class="contact-name" id="contactDisplay">—</div>
   </div>
 
-  <div id="errorState">
-    <div style="font-size:22px;margin-bottom:8px">📵</div>
-    Open this inside Follow Up Boss.
+  <div class="period-row">
+    <button class="period-btn" data-period="week"    onclick="setPeriod('week')">Week</button>
+    <button class="period-btn" data-period="month"   onclick="setPeriod('month')">Month</button>
+    <button class="period-btn" data-period="quarter" onclick="setPeriod('quarter')">Qtr</button>
+    <button class="period-btn" data-period="year"    onclick="setPeriod('year')">Year</button>
+    <button class="period-btn active" data-period="all" onclick="setPeriod('all')">All</button>
   </div>
 
-  <div id="mainContent">
-    <div class="header">
-      <div class="title">📞 Call Tracker</div>
-      <div class="contact-name" id="contactDisplay">—</div>
+  <div class="summary-row">
+    <div class="summary-card attempts-card">
+      <div class="summary-num" id="summaryAttempts">0</div>
+      <div class="summary-label">Attempts</div>
+      <div class="summary-sub" id="summaryAttemptsNote">all time</div>
     </div>
-
-    <div class="period-row">
-      <button class="period-btn" data-period="week"    onclick="setPeriod('week')">Week</button>
-      <button class="period-btn" data-period="month"   onclick="setPeriod('month')">Month</button>
-      <button class="period-btn" data-period="quarter" onclick="setPeriod('quarter')">Qtr</button>
-      <button class="period-btn" data-period="year"    onclick="setPeriod('year')">Year</button>
-      <button class="period-btn active" data-period="all" onclick="setPeriod('all')">All</button>
+    <div class="summary-card convos-card">
+      <div class="summary-num" id="summaryConvos">0</div>
+      <div class="summary-label">Conversations</div>
+      <div class="summary-sub">Connected calls</div>
     </div>
+  </div>
 
-    <div class="summary-row">
-      <div class="summary-card attempts-card">
-        <div class="summary-num" id="summaryAttempts">0</div>
-        <div class="summary-label">Attempts</div>
-        <div class="summary-sub" id="summaryAttemptsNote">all time</div>
-      </div>
-      <div class="summary-card convos-card">
-        <div class="summary-num" id="summaryConvos">0</div>
-        <div class="summary-label">Conversations</div>
-        <div class="summary-sub">Connected calls</div>
-      </div>
+  <div class="stats">
+    <div class="stat no-answer"><div class="stat-num" id="count-no-answer">0</div><div class="stat-label">No Ans.</div></div>
+    <div class="stat voicemail"><div class="stat-num" id="count-voicemail">0</div><div class="stat-label">V-Mail</div></div>
+    <div class="stat connected"><div class="stat-num" id="count-connected">0</div><div class="stat-label">Conn.</div></div>
+    <div class="stat wrong"><div class="stat-num" id="count-wrong">0</div><div class="stat-label">Wrong#</div></div>
+  </div>
+
+  <div class="log-section">
+    <div class="log-label">Log Attempt</div>
+    <div class="outcome-grid">
+      <button class="outcome-btn no-answer" onclick="logAttempt('No Answer')"><span class="dot"></span>No Answer</button>
+      <button class="outcome-btn voicemail" onclick="logAttempt('Left Voicemail')"><span class="dot"></span>Left Voicemail</button>
+      <button class="outcome-btn connected" onclick="logAttempt('Connected')"><span class="dot"></span>Connected</button>
+      <button class="outcome-btn wrong"     onclick="logAttempt('Wrong Number')"><span class="dot"></span>Wrong Number</button>
     </div>
+  </div>
 
-    <div class="stats">
-      <div class="stat no-answer"><div class="stat-num" id="count-no-answer">0</div><div class="stat-label">No Ans.</div></div>
-      <div class="stat voicemail"><div class="stat-num" id="count-voicemail">0</div><div class="stat-label">V-Mail</div></div>
-      <div class="stat connected"><div class="stat-num" id="count-connected">0</div><div class="stat-label">Conn.</div></div>
-      <div class="stat wrong"><div class="stat-num" id="count-wrong">0</div><div class="stat-label">Wrong#</div></div>
-    </div>
+  <div class="note-section">
+    <textarea class="note-input" id="noteInput" rows="2" placeholder="Optional note..."></textarea>
+  </div>
 
-    <div class="log-section">
-      <div class="log-label">Log Attempt</div>
-      <div class="outcome-grid">
-        <button class="outcome-btn no-answer" onclick="logAttempt('No Answer')"><span class="dot"></span>No Answer</button>
-        <button class="outcome-btn voicemail" onclick="logAttempt('Left Voicemail')"><span class="dot"></span>Left Voicemail</button>
-        <button class="outcome-btn connected" onclick="logAttempt('Connected')"><span class="dot"></span>Connected</button>
-        <button class="outcome-btn wrong"     onclick="logAttempt('Wrong Number')"><span class="dot"></span>Wrong Number</button>
-      </div>
-    </div>
+  <div class="divider"></div>
 
-    <div class="note-section">
-      <textarea class="note-input" id="noteInput" rows="2" placeholder="Optional note..."></textarea>
-    </div>
+  <div class="history-header">
+    <div class="history-label">History <span id="historyPeriodLabel" style="opacity:0.55;font-weight:400">(all time)</span></div>
+    <button class="reset-btn" onclick="showResetConfirm()">Reset All</button>
+  </div>
 
-    <div class="divider"></div>
-
-    <div class="history-header">
-      <div class="history-label">History <span id="historyPeriodLabel" style="opacity:0.55;font-weight:400">(all time)</span></div>
-      <button class="reset-btn" onclick="showResetConfirm()">Reset All</button>
-    </div>
-
-    <div class="log-list" id="logList">
-      <div class="empty-state">No calls logged yet</div>
-    </div>
+  <div class="log-list" id="logList">
+    <div class="empty-state">No calls logged yet</div>
   </div>
 </div>
 
+<!-- Confirm Modal -->
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-title">⚠ Reset All Data?</div>
@@ -299,34 +263,27 @@
     'Connected':      '#16a34a',
     'Wrong Number':   '#dc2626'
   };
-  var STORAGE_KEY = 'fub_calls_global_v2';
+  var STORAGE_KEY   = 'fub_calls_global_v2';
   var PERIOD_LABELS = { week:'this week', month:'this month', quarter:'this quarter', year:'this year', all:'all time' };
 
   var currentPeriod     = 'all';
   var currentPersonId   = null;
   var currentPersonName = null;
-  var sdkReady          = false;
 
-  // ── Render immediately with whatever data exists — don't wait for SDK ──────
-  // This makes the widget feel instant; contact name updates once SDK fires.
-  (function earlyRender() {
-    var data = loadData();
-    if (data.attempts.length > 0) {
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('mainContent').style.display  = 'block';
-      renderStats(data);
-    }
-  })();
+  // Render immediately on page load — no waiting at all
+  render();
 
-  // ── FUB SDK ────────────────────────────────────────────────────────────────
+  // ── FUB SDK — updates contact name/ID when ready, no gating ───────────────
   window.onEmbeddedAppSdkReady = function(sdk) {
-    sdkReady = true;
     sdk.getPerson(function(person) {
       if (!person || !person.id) return;
       currentPersonId   = String(person.id);
       currentPersonName = person.name || ('Contact #' + currentPersonId);
-      showWidget();
+      document.getElementById('sdkDot').className = 'sdk-status connected';
+      document.getElementById('sdkDot').title = 'Connected to FUB';
+      render();
     });
+
     sdk.on('personUpdated', function(person) {
       if (!person || !person.id) return;
       currentPersonId   = String(person.id);
@@ -334,21 +291,6 @@
       render();
     });
   };
-
-  // Reduced to 2.5s — if SDK hasn't fired by then, show error
-  setTimeout(function() {
-    if (!sdkReady) {
-      document.getElementById('loadingState').style.display = 'none';
-      document.getElementById('errorState').style.display   = 'block';
-    }
-  }, 2500);
-
-  function showWidget() {
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('errorState').style.display   = 'none';
-    document.getElementById('mainContent').style.display  = 'block';
-    render();
-  }
 
   // ── Storage ────────────────────────────────────────────────────────────────
   function loadData() {
@@ -368,7 +310,7 @@
 
   function getPeriodStart(period) {
     var now = new Date();
-    if (period === 'all') return null;
+    if (period === 'all')     return null;
     if (period === 'week')    { var d = new Date(now); d.setDate(d.getDate() - d.getDay()); d.setHours(0,0,0,0); return d; }
     if (period === 'month')   return new Date(now.getFullYear(), now.getMonth(), 1);
     if (period === 'quarter') return new Date(now.getFullYear(), Math.floor(now.getMonth()/3)*3, 1);
@@ -384,18 +326,15 @@
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    renderStats(loadData());
-  }
-
-  function renderStats(data) {
+    var data     = loadData();
     var filtered = filterAttempts(data.attempts, currentPeriod);
     var label    = PERIOD_LABELS[currentPeriod];
 
-    document.getElementById('contactDisplay').textContent          = currentPersonName || '—';
-    document.getElementById('historyPeriodLabel').textContent      = '(' + label + ')';
-    document.getElementById('summaryAttempts').textContent         = filtered.length;
-    document.getElementById('summaryAttemptsNote').textContent     = label;
-    document.getElementById('summaryConvos').textContent           = filtered.filter(function(a) { return a.outcome === 'Connected'; }).length;
+    document.getElementById('contactDisplay').textContent      = currentPersonName || '—';
+    document.getElementById('historyPeriodLabel').textContent  = '(' + label + ')';
+    document.getElementById('summaryAttempts').textContent     = filtered.length;
+    document.getElementById('summaryAttemptsNote').textContent = label;
+    document.getElementById('summaryConvos').textContent       = filtered.filter(function(a) { return a.outcome === 'Connected'; }).length;
 
     var counts = { 'No Answer':0, 'Left Voicemail':0, 'Connected':0, 'Wrong Number':0 };
     filtered.forEach(function(a) { if (counts[a.outcome] !== undefined) counts[a.outcome]++; });
@@ -409,7 +348,6 @@
       list.innerHTML = '<div class="empty-state">No calls logged ' + (currentPeriod === 'all' ? 'yet' : 'in this period') + '</div>';
       return;
     }
-    // Build HTML string in one pass — faster than multiple DOM ops
     var html = '';
     var rev  = filtered.slice().reverse();
     for (var i = 0; i < rev.length; i++) {
