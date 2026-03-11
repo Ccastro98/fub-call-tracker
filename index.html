@@ -4,463 +4,273 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Call Tracker</title>
-
-<!-- REQUIRED: Follow Up Boss Embedded Apps SDK -->
 <script type="text/javascript" src="https://eia.followupboss.com/embeddedApps-v1.0.1.js"></script>
-
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3350;
-    --accent: #4f8ef7;
-    --green: #3ecf8e;
-    --yellow: #f5a623;
-    --red: #f25f5c;
-    --purple: #a78bfa;
-    --text: #e8eaf6;
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --surface2: #eef0f5;
+    --border: #e0e3eb;
+    --accent: #2563eb;
+    --green: #16a34a;
+    --yellow: #d97706;
+    --red: #dc2626;
+    --purple: #7c3aed;
+    --text: #111827;
     --muted: #6b7280;
     --mono: 'IBM Plex Mono', monospace;
     --sans: 'IBM Plex Sans', sans-serif;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 16px;
-  }
-
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; }
   .widget { max-width: 480px; margin: 0 auto; }
 
+  /* Loading */
   #loadingState {
-    text-align: center;
-    padding: 40px 20px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.1em;
+    text-align: center; padding: 40px 20px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 0.1em;
   }
-
   .spinner {
-    width: 24px; height: 24px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
+    width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  #errorState {
+    display: none; text-align: center; padding: 32px 20px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.06em;
+    border: 1px dashed var(--border); border-radius: 10px;
+  }
+  #errorState .err-icon { font-size: 24px; margin-bottom: 10px; }
   #mainContent { display: none; }
 
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .title {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .title { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   .contact-name {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--accent);
-    background: rgba(79,142,247,0.1);
-    border: 1px solid rgba(79,142,247,0.25);
-    padding: 3px 10px;
-    border-radius: 4px;
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--accent);
+    background: #eff6ff; border: 1px solid #bfdbfe; padding: 3px 10px; border-radius: 4px;
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    margin-bottom: 16px;
+  /* Period Toggle */
+  .period-row { display: flex; gap: 6px; margin-bottom: 14px; }
+  .period-btn {
+    flex: 1; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 6px; padding: 7px 4px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .period-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .period-btn.active { background: #eff6ff; border-color: var(--accent); color: var(--accent); }
+
+  /* Big summary cards */
+  .summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px; position: relative; overflow: hidden;
+  }
+  .summary-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .summary-card.attempts-card::before { background: var(--accent); }
+  .summary-card.convos-card::before   { background: var(--green); }
+  .summary-num {
+    font-family: var(--mono); font-size: 32px; font-weight: 600;
+    line-height: 1; margin-bottom: 4px;
+  }
+  .summary-card.attempts-card .summary-num { color: var(--accent); }
+  .summary-card.convos-card .summary-num   { color: var(--green); }
+  .summary-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .summary-sub {
+    font-size: 10px; color: var(--muted); font-family: var(--mono);
+    margin-top: 3px;
   }
 
+  /* Breakdown stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
   .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 8px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+    position: relative; overflow: hidden;
   }
-
-  .stat::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-  }
-
-  .stat.no-answer::before { background: var(--yellow); }
-  .stat.voicemail::before { background: var(--purple); }
-  .stat.connected::before { background: var(--green); }
-  .stat.wrong::before { background: var(--red); }
-
-  .stat-num {
-    font-family: var(--mono);
-    font-size: 22px;
-    font-weight: 600;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-
+  .stat::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat.no-answer::before  { background: var(--yellow); }
+  .stat.voicemail::before  { background: var(--purple); }
+  .stat.connected::before  { background: var(--green); }
+  .stat.wrong::before      { background: var(--red); }
+  .stat-num { font-family: var(--mono); font-size: 18px; font-weight: 600; line-height: 1; margin-bottom: 3px; }
   .stat.no-answer .stat-num { color: var(--yellow); }
   .stat.voicemail .stat-num { color: var(--purple); }
   .stat.connected .stat-num { color: var(--green); }
-  .stat.wrong .stat-num { color: var(--red); }
+  .stat.wrong .stat-num     { color: var(--red); }
+  .stat-label { font-size: 9px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
 
-  .stat-label {
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .total-bar {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-  }
-
-  .total-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .total-count {
-    font-family: var(--mono);
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .last-attempt {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--mono);
-  }
-
-  .log-section { margin-bottom: 14px; }
-
-  .log-label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-    font-family: var(--mono);
-  }
-
-  .outcome-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
+  /* Log buttons */
+  .log-section { margin-bottom: 12px; }
+  .log-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-family: var(--mono); }
+  .outcome-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .outcome-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 500;
-    padding: 11px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.15s;
-    letter-spacing: 0.03em;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 11px 10px;
+    border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: all 0.15s; letter-spacing: 0.03em;
   }
-
-  .outcome-btn:hover { transform: translateY(-1px); }
-  .outcome-btn:active { transform: translateY(0); }
-  .outcome-btn.no-answer:hover { background: rgba(245,166,35,0.15); border-color: var(--yellow); color: var(--yellow); }
-  .outcome-btn.voicemail:hover { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
-  .outcome-btn.connected:hover { background: rgba(62,207,142,0.15); border-color: var(--green); color: var(--green); }
-  .outcome-btn.wrong:hover { background: rgba(242,95,92,0.15); border-color: var(--red); color: var(--red); }
-
+  .outcome-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .outcome-btn:active { transform: translateY(0); box-shadow: none; }
+  .outcome-btn.no-answer:hover { background: #fffbeb; border-color: var(--yellow); color: var(--yellow); }
+  .outcome-btn.voicemail:hover { background: #f5f3ff; border-color: var(--purple); color: var(--purple); }
+  .outcome-btn.connected:hover { background: #f0fdf4; border-color: var(--green);  color: var(--green); }
+  .outcome-btn.wrong:hover     { background: #fef2f2; border-color: var(--red);    color: var(--red); }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .no-answer .dot { background: var(--yellow); }
   .voicemail .dot { background: var(--purple); }
   .connected .dot { background: var(--green); }
-  .wrong .dot { background: var(--red); }
+  .wrong .dot     { background: var(--red); }
 
-  .note-section { margin-bottom: 14px; }
-
+  /* Note */
+  .note-section { margin-bottom: 12px; }
   .note-input {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 12px;
-    padding: 9px 12px;
-    resize: none;
-    transition: border-color 0.2s;
-    outline: none;
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--sans); font-size: 12px;
+    padding: 9px 12px; resize: none; transition: border-color 0.2s; outline: none;
   }
-
   .note-input:focus { border-color: var(--accent); }
   .note-input::placeholder { color: var(--muted); }
 
-  .history-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .history-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
+  /* History */
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .history-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
   .reset-btn {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    letter-spacing: 0.05em;
-    transition: all 0.15s;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 4px;
+    cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s;
   }
-
   .reset-btn:hover { border-color: var(--red); color: var(--red); }
 
-  .confirm-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(4px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
-
-  .confirm-overlay.active { opacity: 1; pointer-events: all; }
-
-  .confirm-box {
-    background: var(--surface2);
-    border: 1px solid var(--red);
-    border-radius: 12px;
-    padding: 24px;
-    max-width: 300px;
-    width: 90%;
-    transform: scale(0.95);
-    transition: transform 0.2s;
-  }
-
-  .confirm-overlay.active .confirm-box { transform: scale(1); }
-
-  .confirm-title {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--red);
-    margin-bottom: 8px;
-    letter-spacing: 0.05em;
-  }
-
-  .confirm-text {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-
-  .confirm-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 8px 10px;
-    margin-bottom: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .confirm-input:focus { border-color: var(--red); }
-  .confirm-input::placeholder { color: var(--muted); }
-
-  .confirm-btns { display: flex; gap: 8px; }
-
-  .btn-cancel {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 9px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
-
-  .btn-confirm-reset {
-    flex: 1;
-    background: rgba(242,95,92,0.15);
-    border: 1px solid var(--red);
-    color: var(--red);
-    font-family: var(--mono);
-    font-size: 12px;
-    font-weight: 600;
-    padding: 9px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    opacity: 0.4;
-    pointer-events: none;
-  }
-
-  .btn-confirm-reset.enabled { opacity: 1; pointer-events: all; }
-  .btn-confirm-reset.enabled:hover { background: rgba(242,95,92,0.3); }
-
-  .log-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 220px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-
+  .log-list { display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; padding-right: 2px; }
   .log-list::-webkit-scrollbar { width: 4px; }
   .log-list::-webkit-scrollbar-track { background: transparent; }
   .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
   .log-entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 9px 12px;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    animation: slideIn 0.2s ease;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 12px; display: flex; align-items: flex-start; gap: 10px; animation: slideIn 0.2s ease;
   }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
+  .log-entry.is-convo { border-left: 3px solid var(--green); }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
   .entry-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
   .entry-body { flex: 1; min-width: 0; }
-
-  .entry-outcome {
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 2px;
-  }
-
+  .entry-outcome { font-family: var(--mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 2px; }
+  .entry-contact { font-size: 11px; color: var(--accent); font-family: var(--mono); }
   .entry-note { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .entry-time { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
-
+  .convo-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--green); background: #f0fdf4;
+    border: 1px solid #bbf7d0; border-radius: 3px; padding: 1px 5px; margin-left: 6px;
+    vertical-align: middle;
+  }
   .empty-state {
-    text-align: center;
-    padding: 20px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
-    border: 1px dashed var(--border);
-    border-radius: 8px;
+    text-align: center; padding: 20px; font-family: var(--mono); font-size: 11px;
+    color: var(--muted); letter-spacing: 0.05em; border: 1px dashed var(--border); border-radius: 8px;
   }
 
-  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+  /* Confirm modal */
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex;
+    align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .confirm-overlay.active { opacity: 1; pointer-events: all; }
+  .confirm-box {
+    background: #fff; border: 1px solid var(--red); border-radius: 12px; padding: 24px;
+    max-width: 300px; width: 90%; transform: scale(0.95); transition: transform 0.2s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .confirm-overlay.active .confirm-box { transform: scale(1); }
+  .confirm-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 8px; letter-spacing: 0.05em; }
+  .confirm-text { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  .confirm-input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: var(--mono); font-size: 12px; padding: 8px 10px;
+    margin-bottom: 14px; outline: none; transition: border-color 0.2s;
+  }
+  .confirm-input:focus { border-color: var(--red); }
+  .confirm-input::placeholder { color: var(--muted); }
+  .confirm-btns { display: flex; gap: 8px; }
+  .btn-cancel {
+    flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: 12px; padding: 9px; border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+  .btn-confirm-reset {
+    flex: 1; background: #fef2f2; border: 1px solid var(--red); color: var(--red);
+    font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 9px; border-radius: 6px;
+    cursor: pointer; transition: all 0.15s; opacity: 0.4; pointer-events: none;
+  }
+  .btn-confirm-reset.enabled { opacity: 1; pointer-events: all; }
+  .btn-confirm-reset.enabled:hover { background: #fee2e2; }
 
+  /* Toast */
   .toast {
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%) translateY(60px);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 9px 18px;
-    border-radius: 8px;
-    transition: transform 0.25s ease;
-    z-index: 200;
-    white-space: nowrap;
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: #111827; color: #fff; font-family: var(--mono); font-size: 12px;
+    padding: 9px 18px; border-radius: 8px; transition: transform 0.25s ease; z-index: 200; white-space: nowrap;
   }
-
   .toast.show { transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-
 <div class="widget">
+
   <div id="loadingState">
     <div class="spinner"></div>
     Connecting to Follow Up Boss...
   </div>
 
+  <div id="errorState">
+    <div class="err-icon">📵</div>
+    This widget must be opened inside Follow Up Boss.
+  </div>
+
   <div id="mainContent">
+
     <div class="header">
       <div class="title">📞 Call Tracker</div>
       <div class="contact-name" id="contactDisplay">—</div>
     </div>
 
+    <!-- Period toggle -->
+    <div class="period-row">
+      <button class="period-btn" data-period="week"    onclick="setPeriod('week')">Week</button>
+      <button class="period-btn" data-period="month"   onclick="setPeriod('month')">Month</button>
+      <button class="period-btn" data-period="quarter" onclick="setPeriod('quarter')">Quarter</button>
+      <button class="period-btn" data-period="year"    onclick="setPeriod('year')">Year</button>
+      <button class="period-btn active" data-period="all" onclick="setPeriod('all')">All</button>
+    </div>
+
+    <!-- Big summary: Attempts + Conversations -->
+    <div class="summary-row">
+      <div class="summary-card attempts-card">
+        <div class="summary-num" id="summaryAttempts">0</div>
+        <div class="summary-label">Attempts</div>
+        <div class="summary-sub" id="summaryAttemptsNote">all time</div>
+      </div>
+      <div class="summary-card convos-card">
+        <div class="summary-num" id="summaryConvos">0</div>
+        <div class="summary-label">Conversations</div>
+        <div class="summary-sub" id="summaryConvosNote">Connected calls</div>
+      </div>
+    </div>
+
+    <!-- Outcome breakdown -->
     <div class="stats">
       <div class="stat no-answer">
         <div class="stat-num" id="count-no-answer">0</div>
@@ -480,14 +290,7 @@
       </div>
     </div>
 
-    <div class="total-bar">
-      <div>
-        <div class="total-label">Total Attempts</div>
-        <div class="last-attempt" id="lastAttempt">No attempts yet</div>
-      </div>
-      <div class="total-count" id="totalCount">0</div>
-    </div>
-
+    <!-- Log buttons -->
     <div class="log-section">
       <div class="log-label">Log Attempt</div>
       <div class="outcome-grid">
@@ -513,8 +316,8 @@
     <div class="divider"></div>
 
     <div class="history-header">
-      <div class="history-label">History</div>
-      <button class="reset-btn" onclick="showResetConfirm()">Reset</button>
+      <div class="history-label">History <span id="historyPeriodLabel" style="opacity:0.6;font-weight:400">(all time)</span></div>
+      <button class="reset-btn" onclick="showResetConfirm()">Reset All</button>
     </div>
 
     <div class="log-list" id="logList">
@@ -527,11 +330,14 @@
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-title">⚠ Reset All Data?</div>
-    <div class="confirm-text">This will permanently delete all call history for this contact. Type <strong style="color:#f25f5c">RESET</strong> to confirm.</div>
+    <div class="confirm-text">
+      This will permanently delete <strong>all</strong> call history across all contacts and time periods.
+      Type <strong style="color:#dc2626">RESET</strong> to confirm.
+    </div>
     <input class="confirm-input" id="confirmInput" placeholder='Type "RESET" here' oninput="checkConfirmInput(this.value)">
     <div class="confirm-btns">
       <button class="btn-cancel" onclick="hideResetConfirm()">Cancel</button>
-      <button class="btn-confirm-reset" id="confirmResetBtn" onclick="doReset()">Wipe Data</button>
+      <button class="btn-confirm-reset" id="confirmResetBtn" onclick="doReset()">Wipe All Data</button>
     </div>
   </div>
 </div>
@@ -540,97 +346,159 @@
 
 <script>
   var OUTCOME_COLORS = {
-    'No Answer': 'var(--yellow)',
-    'Left Voicemail': 'var(--purple)',
-    'Connected': 'var(--green)',
-    'Wrong Number': 'var(--red)'
+    'No Answer':      '#d97706',
+    'Left Voicemail': '#7c3aed',
+    'Connected':      '#16a34a',
+    'Wrong Number':   '#dc2626'
   };
 
-  var currentPersonId = null;
+  var STORAGE_KEY = 'fub_calls_global_v2';
+  var currentPeriod     = 'all';
+  var currentPersonId   = null;
   var currentPersonName = null;
+  var sdkReady          = false;
 
-  // ── FUB Embedded Apps SDK ──────────────────────────────────────────────────
+  var PERIOD_LABELS = {
+    week:    'this week',
+    month:   'this month',
+    quarter: 'this quarter',
+    year:    'this year',
+    all:     'all time'
+  };
+
+  // ── FUB SDK ────────────────────────────────────────────────────────────────
   window.onEmbeddedAppSdkReady = function(sdk) {
+    sdkReady = true;
     sdk.getPerson(function(person) {
-      currentPersonId = person.id ? String(person.id) : 'unknown';
+      if (!person || !person.id) return;
+      currentPersonId   = String(person.id);
       currentPersonName = person.name || ('Contact #' + currentPersonId);
       showWidget();
     });
-
-    // Update if agent navigates to a different contact
     sdk.on('personUpdated', function(person) {
-      currentPersonId = person.id ? String(person.id) : 'unknown';
+      if (!person || !person.id) return;
+      currentPersonId   = String(person.id);
       currentPersonName = person.name || ('Contact #' + currentPersonId);
       render();
     });
   };
 
-  // Fallback for testing outside of FUB (e.g. direct browser visit)
   setTimeout(function() {
-    if (!currentPersonId) {
-      currentPersonId = 'demo';
-      currentPersonName = 'Demo Contact';
-      showWidget();
+    if (!sdkReady) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display   = 'block';
     }
-  }, 3000);
+  }, 6000);
 
   function showWidget() {
     document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
+    document.getElementById('errorState').style.display   = 'none';
+    document.getElementById('mainContent').style.display  = 'block';
     render();
   }
 
-  // ── Storage ────────────────────────────────────────────────────────────────
-  function storageKey() { return 'fub_calls_' + currentPersonId; }
-
+  // ── Storage (global — all contacts, all agents on this browser) ────────────
   function loadData() {
-    try { return JSON.parse(localStorage.getItem(storageKey())) || { attempts: [] }; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { attempts: [] }; }
     catch(e) { return { attempts: [] }; }
   }
 
-  function saveData(data) { localStorage.setItem(storageKey(), JSON.stringify(data)); }
+  function saveData(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  // ── Period filtering ───────────────────────────────────────────────────────
+  function setPeriod(p) {
+    currentPeriod = p;
+    document.querySelectorAll('.period-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-period') === p);
+    });
+    render();
+  }
+
+  function getPeriodStart(period) {
+    var now = new Date();
+    if (period === 'all') return null;
+    if (period === 'week') {
+      var d = new Date(now);
+      d.setDate(d.getDate() - d.getDay()); // Sunday
+      d.setHours(0,0,0,0);
+      return d;
+    }
+    if (period === 'month') {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    if (period === 'quarter') {
+      var q = Math.floor(now.getMonth() / 3);
+      return new Date(now.getFullYear(), q * 3, 1);
+    }
+    if (period === 'year') {
+      return new Date(now.getFullYear(), 0, 1);
+    }
+    return null;
+  }
+
+  function filterAttempts(attempts, period) {
+    var start = getPeriodStart(period);
+    if (!start) return attempts;
+    return attempts.filter(function(a) {
+      return new Date(a.time) >= start;
+    });
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function render() {
-    var data = loadData();
-    var attempts = data.attempts;
+    var data     = loadData();
+    var all      = data.attempts;
+    var filtered = filterAttempts(all, currentPeriod);
+    var label    = PERIOD_LABELS[currentPeriod];
 
+    // Contact badge
     document.getElementById('contactDisplay').textContent = currentPersonName || '—';
 
-    var counts = { 'No Answer': 0, 'Left Voicemail': 0, 'Connected': 0, 'Wrong Number': 0 };
-    attempts.forEach(function(a) { if (counts[a.outcome] !== undefined) counts[a.outcome]++; });
+    // Period history label
+    document.getElementById('historyPeriodLabel').textContent = '(' + label + ')';
 
+    // Summary cards
+    var totalAttempts = filtered.length;
+    var totalConvos   = filtered.filter(function(a) { return a.outcome === 'Connected'; }).length;
+
+    document.getElementById('summaryAttempts').textContent     = totalAttempts;
+    document.getElementById('summaryAttemptsNote').textContent = label;
+    document.getElementById('summaryConvos').textContent       = totalConvos;
+
+    // Outcome breakdown
+    var counts = { 'No Answer': 0, 'Left Voicemail': 0, 'Connected': 0, 'Wrong Number': 0 };
+    filtered.forEach(function(a) {
+      if (counts[a.outcome] !== undefined) counts[a.outcome]++;
+    });
     document.getElementById('count-no-answer').textContent = counts['No Answer'];
     document.getElementById('count-voicemail').textContent = counts['Left Voicemail'];
     document.getElementById('count-connected').textContent = counts['Connected'];
-    document.getElementById('count-wrong').textContent = counts['Wrong Number'];
-    document.getElementById('totalCount').textContent = attempts.length;
+    document.getElementById('count-wrong').textContent     = counts['Wrong Number'];
 
-    if (attempts.length > 0) {
-      var last = attempts[attempts.length - 1];
-      var d = new Date(last.time);
-      document.getElementById('lastAttempt').textContent =
-        'Last: ' + d.toLocaleDateString() + ' ' +
-        d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    } else {
-      document.getElementById('lastAttempt').textContent = 'No attempts yet';
-    }
-
+    // History list
     var list = document.getElementById('logList');
-    if (attempts.length === 0) {
-      list.innerHTML = '<div class="empty-state">No calls logged yet</div>';
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty-state">No calls logged ' + (currentPeriod === 'all' ? 'yet' : 'in this period') + '</div>';
       return;
     }
 
-    list.innerHTML = attempts.slice().reverse().map(function(a) {
-      var color = OUTCOME_COLORS[a.outcome] || 'var(--muted)';
-      var d = new Date(a.time);
-      var timeStr = d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' +
-                    d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-      return '<div class="log-entry">' +
+    list.innerHTML = filtered.slice().reverse().map(function(a) {
+      var color    = OUTCOME_COLORS[a.outcome] || '#6b7280';
+      var d        = new Date(a.time);
+      var timeStr  = d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
+                     d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var isConvo  = a.outcome === 'Connected';
+      var badge    = isConvo ? '<span class="convo-badge">Convo</span>' : '';
+      var contactInfo = a.personName
+        ? '<div class="entry-contact">' + escHtml(a.personName) + '</div>'
+        : '';
+      return '<div class="log-entry' + (isConvo ? ' is-convo' : '') + '">' +
         '<div class="entry-dot" style="background:' + color + '"></div>' +
         '<div class="entry-body">' +
-          '<div class="entry-outcome" style="color:' + color + '">' + escHtml(a.outcome) + '</div>' +
+          '<div class="entry-outcome" style="color:' + color + '">' + escHtml(a.outcome) + badge + '</div>' +
+          contactInfo +
           (a.note ? '<div class="entry-note">' + escHtml(a.note) + '</div>' : '') +
         '</div>' +
         '<div class="entry-time">' + timeStr + '</div>' +
@@ -638,17 +506,25 @@
     }).join('');
   }
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Log attempt ────────────────────────────────────────────────────────────
   function logAttempt(outcome) {
     var note = document.getElementById('noteInput').value.trim();
     var data = loadData();
-    data.attempts.push({ outcome: outcome, note: note, time: new Date().toISOString() });
+    data.attempts.push({
+      outcome:    outcome,
+      note:       note,
+      time:       new Date().toISOString(),
+      personId:   currentPersonId   || null,
+      personName: currentPersonName || null
+    });
     saveData(data);
     document.getElementById('noteInput').value = '';
     render();
-    showToast('✓ Logged: ' + outcome);
+    var extra = (outcome === 'Connected') ? ' + Conversation ✓' : '';
+    showToast('✓ Logged: ' + outcome + extra);
   }
 
+  // ── Reset ──────────────────────────────────────────────────────────────────
   function showResetConfirm() {
     document.getElementById('confirmInput').value = '';
     document.getElementById('confirmResetBtn').classList.remove('enabled');
@@ -670,14 +546,15 @@
     saveData({ attempts: [] });
     hideResetConfirm();
     render();
-    showToast('Data reset.');
+    showToast('All data reset.');
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
   function showToast(msg) {
     var t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(function() { t.classList.remove('show'); }, 2200);
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
   }
 
   function escHtml(s) {
