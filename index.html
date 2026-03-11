@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --green: #3ecf8e;
+    --yellow: #f5a623;
+    --red: #f25f5c;
+    --purple: #a78bfa;
+    --text: #e8eaf6;
+    --muted: #6b7280;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .widget {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .contact-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(79,142,247,0.1);
+    border: 1px solid rgba(79,142,247,0.25);
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+
+  /* Stats Bar */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat.no-answer::before { background: var(--yellow); }
+  .stat.voicemail::before { background: var(--purple); }
+  .stat.connected::before { background: var(--green); }
+  .stat.wrong::before { background: var(--red); }
+
+  .stat-num {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat.no-answer .stat-num { color: var(--yellow); }
+  .stat.voicemail .stat-num { color: var(--purple); }
+  .stat.connected .stat-num { color: var(--green); }
+  .stat.wrong .stat-num { color: var(--red); }
+
+  .stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Total */
+  .total-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .total-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .total-count {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .last-attempt {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* Log Button Group */
+  .log-section {
+    margin-bottom: 14px;
+  }
+
+  .log-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: var(--mono);
+  }
+
+  .outcome-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .outcome-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 11px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+
+  .outcome-btn:hover { transform: translateY(-1px); }
+  .outcome-btn:active { transform: translateY(0); }
+
+  .outcome-btn.no-answer:hover { background: rgba(245,166,35,0.15); border-color: var(--yellow); color: var(--yellow); }
+  .outcome-btn.voicemail:hover { background: rgba(167,139,250,0.15); border-color: var(--purple); color: var(--purple); }
+  .outcome-btn.connected:hover { background: rgba(62,207,142,0.15); border-color: var(--green); color: var(--green); }
+  .outcome-btn.wrong:hover { background: rgba(242,95,92,0.15); border-color: var(--red); color: var(--red); }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .no-answer .dot { background: var(--yellow); }
+  .voicemail .dot { background: var(--purple); }
+  .connected .dot { background: var(--green); }
+  .wrong .dot { background: var(--red); }
+
+  /* Note input */
+  .note-section {
+    margin-bottom: 14px;
+  }
+
+  .note-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    padding: 9px 12px;
+    resize: none;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .note-input:focus { border-color: var(--accent); }
+  .note-input::placeholder { color: var(--muted); }
+
+  /* History */
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .history-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .reset-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* Confirm modal */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .confirm-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .confirm-box {
+    background: var(--surface2);
+    border: 1px solid var(--red);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 300px;
+    width: 90%;
+    transform: scale(0.95);
+    transition: transform 0.2s;
+  }
+
+  .confirm-overlay.active .confirm-box { transform: scale(1); }
+
+  .confirm-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--red);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .confirm-text {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .confirm-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .confirm-input:focus { border-color: var(--red); }
+  .confirm-input::placeholder { color: var(--muted); }
+
+  .confirm-btns {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+  .btn-confirm-reset {
+    flex: 1;
+    background: rgba(242,95,92,0.15);
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .btn-confirm-reset.enabled {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .btn-confirm-reset.enabled:hover { background: rgba(242,95,92,0.3); }
+
+  /* Log entries */
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .entry-body { flex: 1; min-width: 0; }
+
+  .entry-outcome {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+  }
+
+  .entry-note {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .entry-time {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    transition: transform 0.25s ease;
+    z-index: 200;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="widget">
+  <div class="header">
+    <div class="title">📞 Call Tracker</div>
+    <div class="contact-name" id="contactDisplay">Loading...</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat no-answer">
+      <div class="stat-num" id="count-no-answer">0</div>
+      <div class="stat-label">No Ans.</div>
+    </div>
+    <div class="stat voicemail">
+      <div class="stat-num" id="count-voicemail">0</div>
+      <div class="stat-label">V-Mail</div>
+    </div>
+    <div class="stat connected">
+      <div class="stat-num" id="count-connected">0</div>
+      <div class="stat-label">Conn.</div>
+    </div>
+    <div class="stat wrong">
+      <div class="stat-num" id="count-wrong">0</div>
+      <div class="stat-label">Wrong#</div>
+    </div>
+  </div>
+
+  <div class="total-bar">
+    <div>
+      <div class="total-label">Total Attempts</div>
+      <div class="last-attempt" id="lastAttempt">No attempts yet</div>
+    </div>
+    <div class="total-count" id="totalCount">0</div>
+  </div>
+
+  <div class="log-section">
+    <div class="log-label">Log Attempt</div>
+    <div class="outcome-grid">
+      <button class="outcome-btn no-answer" onclick="logAttempt('No Answer')">
+        <span class="dot"></span> No Answer
+      </button>
+      <button class="outcome-btn voicemail" onclick="logAttempt('Left Voicemail')">
+        <span class="dot"></span> Left Voicemail
+      </button>
+      <button class="outcome-btn connected" onclick="logAttempt('Connected')">
+        <span class="dot"></span> Connected
+      </button>
+      <button class="outcome-btn wrong" onclick="logAttempt('Wrong Number')">
+        <span class="dot"></span> Wrong Number
+      </button>
+    </div>
+  </div>
+
+  <div class="note-section">
+    <textarea class="note-input" id="noteInput" rows="2" placeholder="Optional note for this attempt..."></textarea>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="history-header">
+    <div class="history-label">History</div>
+    <button class="reset-btn" onclick="showResetConfirm()">Reset</button>
+  </div>
+
+  <div class="log-list" id="logList">
+    <div class="empty-state">No calls logged yet</div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-title">⚠ Reset All Data?</div>
+    <div class="confirm-text">This will permanently delete all call history for this contact. Type <strong style="color:#f25f5c">RESET</strong> to confirm.</div>
+    <input class="confirm-input" id="confirmInput" placeholder='Type "RESET" here' oninput="checkConfirmInput(this.value)">
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="hideResetConfirm()">Cancel</button>
+      <button class="btn-confirm-reset" id="confirmResetBtn" onclick="doReset()">Wipe Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const OUTCOME_COLORS = {
+    'No Answer': 'var(--yellow)',
+    'Left Voicemail': 'var(--purple)',
+    'Connected': 'var(--green)',
+    'Wrong Number': 'var(--red)'
+  };
+
+  const OUTCOME_KEYS = {
+    'No Answer': 'no-answer',
+    'Left Voicemail': 'voicemail',
+    'Connected': 'connected',
+    'Wrong Number': 'wrong'
+  };
+
+  // Get contact ID from URL params (FUB passes ?personId=xxx)
+  function getPersonId() {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('personId') || p.get('contactId') || 'demo';
+  }
+
+  function getContactName() {
+    const p = new URLSearchParams(window.location.search);
+    return p.get('contactName') || p.get('name') || null;
+  }
+
+  function storageKey() {
+    return `fub_calls_${getPersonId()}`;
+  }
+
+  function loadData() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey())) || { attempts: [] };
+    } catch { return { attempts: [] }; }
+  }
+
+  function saveData(data) {
+    localStorage.setItem(storageKey(), JSON.stringify(data));
+  }
+
+  function render() {
+    const data = loadData();
+    const attempts = data.attempts;
+
+    // Contact display
+    const name = getContactName();
+    document.getElementById('contactDisplay').textContent = name ? name : `ID: ${getPersonId()}`;
+
+    // Counts
+    const counts = { 'No Answer': 0, 'Left Voicemail': 0, 'Connected': 0, 'Wrong Number': 0 };
+    attempts.forEach(a => { if (counts[a.outcome] !== undefined) counts[a.outcome]++; });
+
+    document.getElementById('count-no-answer').textContent = counts['No Answer'];
+    document.getElementById('count-voicemail').textContent = counts['Left Voicemail'];
+    document.getElementById('count-connected').textContent = counts['Connected'];
+    document.getElementById('count-wrong').textContent = counts['Wrong Number'];
+    document.getElementById('totalCount').textContent = attempts.length;
+
+    // Last attempt
+    if (attempts.length > 0) {
+      const last = attempts[attempts.length - 1];
+      const d = new Date(last.time);
+      document.getElementById('lastAttempt').textContent = `Last: ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+    } else {
+      document.getElementById('lastAttempt').textContent = 'No attempts yet';
+    }
+
+    // Log list
+    const list = document.getElementById('logList');
+    if (attempts.length === 0) {
+      list.innerHTML = '<div class="empty-state">No calls logged yet</div>';
+      return;
+    }
+
+    list.innerHTML = [...attempts].reverse().map(a => {
+      const color = OUTCOME_COLORS[a.outcome] || 'var(--muted)';
+      const d = new Date(a.time);
+      const timeStr = `${d.toLocaleDateString([], {month:'short',day:'numeric'})} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`;
+      return `
+        <div class="log-entry">
+          <div class="entry-dot" style="background:${color}"></div>
+          <div class="entry-body">
+            <div class="entry-outcome" style="color:${color}">${a.outcome}</div>
+            ${a.note ? `<div class="entry-note">${escHtml(a.note)}</div>` : ''}
+          </div>
+          <div class="entry-time">${timeStr}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function logAttempt(outcome) {
+    const note = document.getElementById('noteInput').value.trim();
+    const data = loadData();
+    data.attempts.push({ outcome, note, time: new Date().toISOString() });
+    saveData(data);
+    document.getElementById('noteInput').value = '';
+    render();
+    showToast(`✓ Logged: ${outcome}`);
+  }
+
+  function showResetConfirm() {
+    document.getElementById('confirmInput').value = '';
+    document.getElementById('confirmResetBtn').classList.remove('enabled');
+    document.getElementById('confirmOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('confirmInput').focus(), 100);
+  }
+
+  function hideResetConfirm() {
+    document.getElementById('confirmOverlay').classList.remove('active');
+  }
+
+  function checkConfirmInput(val) {
+    const btn = document.getElementById('confirmResetBtn');
+    if (val.trim().toUpperCase() === 'RESET') {
+      btn.classList.add('enabled');
+    } else {
+      btn.classList.remove('enabled');
+    }
+  }
+
+  function doReset() {
+    saveData({ attempts: [] });
+    hideResetConfirm();
+    render();
+    showToast('Data reset.');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Close modal on overlay click
+  document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+    if (e.target === this) hideResetConfirm();
+  });
+
+  render();
+</script>
+</body>
+</html>
