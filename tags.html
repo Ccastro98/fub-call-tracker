@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tag Widget</title>
+<script type="text/javascript" src="https://eia.followupboss.com/embeddedApps-v1.0.1.js"></script>
+<style>
+  :root {
+    --bg:#fff; --surface:#f7f8fa; --border:#e0e3eb;
+    --text:#111827; --muted:#6b7280;
+    --mono:ui-monospace,'SF Mono','Cascadia Mono',monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);padding:0;}
+  .w{width:100%;padding:9px;display:flex;flex-direction:column;gap:8px;}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  /* ── Active tags on contact ── */
+  .active-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+  .section-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+  .active-tags{display:flex;flex-wrap:wrap;gap:5px;min-height:24px;}
+  .active-tag{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:600;padding:3px 8px;border-radius:99px;cursor:pointer;transition:all 0.15s;}
+  .active-tag .remove{font-size:11px;opacity:0.6;line-height:1;}
+  .active-tag:hover .remove{opacity:1;}
+  .no-tags{font-family:var(--mono);font-size:10px;color:var(--muted);font-style:italic;}
+
+  /* ── Tag groups ── */
+  .group{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .group-header{padding:7px 10px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);}
+  .group-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .group-name{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+  .group-tags{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;}
+  .tag-btn{font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 11px;border-radius:6px;cursor:pointer;border:1.5px solid transparent;transition:all 0.12s;letter-spacing:0.03em;}
+  .tag-btn:active{transform:scale(0.96);}
+  .tag-btn.applied{opacity:1;}
+  .tag-btn.not-applied{opacity:0.55;}
+  .tag-btn.not-applied:hover{opacity:1;}
+
+  /* ── Saving indicator ── */
+  .saving{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;padding:2px;}
+
+  /* ── Toast ── */
+  .toast{position:fixed;bottom:10px;left:50%;transform:translateX(-50%) translateY(36px);background:#111827;color:#fff;font-family:var(--mono);font-size:10px;padding:6px 14px;border-radius:6px;transition:transform 0.2s;z-index:200;white-space:nowrap;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* ── Error state ── */
+  .err{background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:10px;font-family:var(--mono);font-size:10px;color:#dc2626;text-align:center;}
+</style>
+</head>
+<body>
+<div class="w">
+
+  <!-- Header bubble -->
+  <div style="background:linear-gradient(90deg,#1e3a8a,#2563eb);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.6);">🏷 Tag Widget</div>
+      <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="contactName"></div>
+    </div>
+    <span id="sdkDot" style="width:6px;height:6px;border-radius:50%;background:#fde047;display:inline-block;animation:pulse 1.2s infinite;"></span>
+  </div>
+
+  <!-- Active tags -->
+  <div class="active-section">
+    <div class="section-label">Current Tags</div>
+    <div class="active-tags" id="activeTags"><span class="no-tags">No tags yet</span></div>
+  </div>
+
+  <!-- Tag groups rendered here -->
+  <div id="groupsContainer"></div>
+
+  <div class="saving" id="savingMsg"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Tag definitions — edit these to customize ─────────────────────────────────
+var TAG_GROUPS = [
+  {
+    name: 'Tier',
+    color: '#8b5cf6',
+    bg:   '#f5f3ff',
+    border:'#ddd6fe',
+    text: '#5b21b6',
+    tags: ['VIP', 'Tier 1', 'Tier 2', 'Tier 3']
+  },
+  {
+    name: 'Lead Type',
+    color: '#0ea5e9',
+    bg:   '#f0f9ff',
+    border:'#bae6fd',
+    text: '#0369a1',
+    tags: ['Buyer Lead', 'Seller Lead', 'Investor Lead', 'Referral']
+  },
+  {
+    name: 'Do Not Contact',
+    color: '#ef4444',
+    bg:   '#fef2f2',
+    border:'#fecaca',
+    text: '#991b1b',
+    tags: ['DNC', 'Wrong Number', 'Unsubscribed', 'Trash']
+  }
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+var personId   = null;
+var personName = null;
+var activeTags = [];   // current tags on contact (lowercase for comparison)
+var saving     = false;
+var sdkRef     = null;
+
+// ── Build group UI ────────────────────────────────────────────────────────────
+function buildGroups() {
+  var container = document.getElementById('groupsContainer');
+  container.innerHTML = '';
+  TAG_GROUPS.forEach(function(group) {
+    var div = document.createElement('div');
+    div.className = 'group';
+    var tagsHtml = group.tags.map(function(tag) {
+      return '<button class="tag-btn" id="tbtn-'+slugify(tag)+'" '+
+        'style="background:'+group.bg+';border-color:'+group.border+';color:'+group.text+';" '+
+        'onclick="toggleTag(\''+escAttr(tag)+'\')">'+escHtml(tag)+'</button>';
+    }).join('');
+    div.innerHTML =
+      '<div class="group-header">' +
+        '<div class="group-dot" style="background:'+group.color+'"></div>' +
+        '<div class="group-name">'+escHtml(group.name)+'</div>' +
+      '</div>' +
+      '<div class="group-tags">'+tagsHtml+'</div>';
+    container.appendChild(div);
+  });
+}
+
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]/g,'-'); }
+
+// ── Render active tags + button states ───────────────────────────────────────
+function renderTags() {
+  var container = document.getElementById('activeTags');
+  if (!activeTags.length) {
+    container.innerHTML = '<span class="no-tags">No tags yet</span>';
+  } else {
+    container.innerHTML = activeTags.map(function(tag) {
+      var style = getTagStyle(tag);
+      return '<span class="active-tag" style="background:'+style.bg+';color:'+style.text+';border:1.5px solid '+style.border+';" onclick="toggleTag(\''+escAttr(tag)+'\')">' +
+        escHtml(tag)+'<span class="remove">×</span></span>';
+    }).join('');
+  }
+  // Update button states
+  TAG_GROUPS.forEach(function(group) {
+    group.tags.forEach(function(tag) {
+      var btn = document.getElementById('tbtn-'+slugify(tag));
+      if (!btn) return;
+      var isApplied = activeTags.some(function(t){ return t.toLowerCase()===tag.toLowerCase(); });
+      btn.className = 'tag-btn ' + (isApplied ? 'applied' : 'not-applied');
+      if (isApplied) {
+        btn.textContent = '✓ ' + tag;
+      } else {
+        btn.textContent = tag;
+      }
+    });
+  });
+}
+
+function getTagStyle(tag) {
+  for (var i=0; i<TAG_GROUPS.length; i++) {
+    for (var j=0; j<TAG_GROUPS[i].tags.length; j++) {
+      if (TAG_GROUPS[i].tags[j].toLowerCase() === tag.toLowerCase()) {
+        return TAG_GROUPS[i];
+      }
+    }
+  }
+  return {bg:'#f3f4f6', text:'#374151', border:'#d1d5db'};
+}
+
+// ── Toggle a tag ──────────────────────────────────────────────────────────────
+function toggleTag(tag) {
+  if (!personId) { showToast('⚠ No contact loaded'); return; }
+  if (saving)    { showToast('Saving, please wait…'); return; }
+
+  var idx = activeTags.findIndex(function(t){ return t.toLowerCase()===tag.toLowerCase(); });
+  if (idx > -1) {
+    activeTags.splice(idx, 1);
+    showToast('− Removed: ' + tag);
+  } else {
+    activeTags.push(tag);
+    showToast('+ Added: ' + tag);
+  }
+  renderTags();
+  saveTags();
+}
+
+// ── Save tags to FUB API ──────────────────────────────────────────────────────
+function saveTags() {
+  if (!personId) return;
+  saving = true;
+  setSavingMsg('Saving…');
+
+  fetch('https://api.followupboss.com/v1/people/' + personId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags: activeTags })
+  })
+  .then(function(res) {
+    saving = false;
+    if (res.ok) {
+      setSavingMsg('✓ Saved', 1500);
+    } else {
+      res.json().then(function(d){
+        setSavingMsg('⚠ Error: ' + (d.errorMessage||res.status), 3000);
+      }).catch(function(){ setSavingMsg('⚠ Save failed', 3000); });
+    }
+  })
+  .catch(function(err) {
+    saving = false;
+    setSavingMsg('⚠ Network error', 3000);
+  });
+}
+
+function setSavingMsg(msg, clearAfter) {
+  var el = document.getElementById('savingMsg');
+  el.textContent = msg;
+  if (clearAfter) { setTimeout(function(){ el.textContent=''; }, clearAfter); }
+}
+
+// ── Load tags from FUB API ────────────────────────────────────────────────────
+function loadTags(id) {
+  fetch('https://api.followupboss.com/v1/people/' + id)
+  .then(function(res){ return res.json(); })
+  .then(function(data) {
+    activeTags = data.tags || [];
+    renderTags();
+  })
+  .catch(function() {
+    activeTags = [];
+    renderTags();
+  });
+}
+
+// ── FUB SDK ───────────────────────────────────────────────────────────────────
+function onContact(p) {
+  if (!p || !p.id) return;
+  personId   = String(p.id);
+  personName = p.name || ('Contact #' + p.id);
+  document.getElementById('contactName').textContent = personName;
+  var dot = document.getElementById('sdkDot');
+  dot.style.background = '#4ade80'; dot.style.animation = 'none';
+  loadTags(personId);
+}
+
+window.onEmbeddedAppSdkReady = function(sdk) {
+  sdkRef = sdk;
+  sdk.getPerson(function(p){ onContact(p); });
+  sdk.on('personUpdated', function(p){ onContact(p); });
+  // Retry in case of race condition
+  var tries = 0;
+  var retry = setInterval(function(){
+    if (personId) { clearInterval(retry); return; }
+    if (++tries > 6) { clearInterval(retry); return; }
+    sdk.getPerson(function(p){ if(p&&p.id){ onContact(p); clearInterval(retry); } });
+  }, 500);
+};
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildGroups();
+renderTags();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showToast(m){ var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2000); }
+function escHtml(s){ return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+function escAttr(s){ return s?String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;'):''; }
+Array.prototype.findIndex = Array.prototype.findIndex || function(fn){ for(var i=0;i<this.length;i++){if(fn(this[i]))return i;} return -1; };
+</script>
+</body>
+</html>
