@@ -213,7 +213,10 @@
   </div>
 
   <!-- 3. Log buttons -->
-  <div class="log-grid">
+  <div id="sdkStatus" style="font-family:var(--mono);font-size:9px;text-align:center;padding:4px 8px;border-radius:6px;background:#fefce8;border:1px solid #fde047;color:#854d0e;">
+    ⏳ Waiting for contact…
+  </div>
+  <div class="log-grid" id="logGrid" style="opacity:0.45;pointer-events:none;">
     <button class="lbtn na" onclick="doLog('No Answer')"><span class="ldot"></span>No Answer</button>
     <button class="lbtn vm" onclick="doLog('Left Voicemail')"><span class="ldot"></span>Left Voicemail</button>
     <button class="lbtn cn" onclick="doLog('Connected')"><span class="ldot"></span>Conversation</button>
@@ -349,14 +352,33 @@ render();renderGoal();
 function updateContact(p){
   if(!p||!p.id)return;
   pid=String(p.id);pname=p.name||('Contact #'+p.id);
+  // Show name badge in DTD2 bar
   var badge=document.getElementById('contactBadge');
   badge.textContent=pname;badge.style.display='block';
+  // Unlock log buttons
+  var grid=document.getElementById('logGrid');
+  grid.style.opacity='1';grid.style.pointerEvents='auto';
+  // Update status bar
+  var status=document.getElementById('sdkStatus');
+  status.textContent='✓ '+pname;
+  status.style.background='#f0fdf4';status.style.border='1px solid #bbf7d0';status.style.color='#15803d';
   document.getElementById('sdkDot').className='sdk-dot live';
   render();
 }
+
 window.onEmbeddedAppSdkReady=function(sdk){
+  // Try immediately
   sdk.getPerson(function(p){ updateContact(p); });
+  // Listen for contact switches
   sdk.on('personUpdated',function(p){ updateContact(p); });
+  // Retry every 500ms for up to 5s in case getPerson fires before DOM is ready
+  var attempts=0;
+  var retry=setInterval(function(){
+    if(pid){clearInterval(retry);return;}
+    attempts++;
+    if(attempts>10){clearInterval(retry);return;}
+    sdk.getPerson(function(p){ if(p&&p.id){updateContact(p);clearInterval(retry);} });
+  },500);
 };
 
 // ── Storage ───────────────────────────────────────────────────────────────────
